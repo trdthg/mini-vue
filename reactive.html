@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        let activeEffect
+        class Dep {
+
+            subscriber = new Set()
+
+            depend() {
+                if (activeEffect) {
+                    this.subscriber.add(activeEffect)
+                }
+            }
+
+            notify() {
+                this.subscriber.forEach(effect => {
+                    effect()
+                })
+            }
+        }
+
+        function watchEffect(effect) {
+            activeEffect = effect
+            effect()
+            activeEffect = null
+        }
+        // function reactive(raw) {
+        //     // 仿照dep类，为每个键值设定setter和getter方法
+        //     // raw中的每个对象都是一个Dep实例
+        //     Object.keys(raw).forEach(key => {
+        //         let dep = new Dep(key)
+        //         let value = raw[key]
+        //         Object.defineProperty(raw, key, {
+        //             fuck() {
+        //                 console.log('cnm');
+        //             },
+        //             get() {
+        //                 dep.depend()
+        //                 return value
+        //             },
+        //             set(newValue) {
+        //                 value = newValue
+        //                 dep.notify()
+        //             }
+        //         })
+        //     })
+        //     return raw
+        // }
+
+        // targetMap depMap
+        // obj1    key1 dep
+        //         key2 dep
+        // obj2    key1 dep
+        //         key2 dep
+        const targetMap = new WeakMap();
+
+        function getDep(target, key) {
+            let depsMap = targetMap.get(target);
+            if (!depsMap) {
+                depsMap = new Map();
+                targetMap.set(target, depsMap);
+            }
+            let dep = depsMap.get(key);
+            if (!dep) {
+                dep = new Dep();
+                depsMap.set(key, dep);
+            }
+            return dep
+        }
+
+        // 使用Proxy实现的另一个好处是，我们能够检测到添加新元素，比如下面的state.msg
+        const reactiveHandler = {
+            get(target, key, receiver) {
+                const dep = getDep(target, key);
+                dep.depend()
+                return Reflect.get(target, key, receiver)
+            },
+            set(target, key, value, receiver) {
+                const dep = getDep(target, key);
+                const result = Reflect.set(target, key, value, receiver);
+                // 先修改值在notify
+                dep.notify()
+                return result
+            },
+            // 还可以实现更多的traps
+            // has() {
+
+            // },
+            // onKeys() {
+
+            // }
+        }
+
+        function reactive(raw) {
+            return new Proxy(raw, reactiveHandler)
+        }
+        const state = reactive({
+            count: 0,
+            fuck: 'Fuck!'
+        })
+        console.log('state:', state);
+
+        watchEffect(() => {
+            console.log(state.count, state.msg)
+        })
+
+        state.count++
+
+        state.msg = 'i am not exist before '
+
+    </script>
+</body>
+</html>

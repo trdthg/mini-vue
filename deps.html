@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+
+    <script>
+
+        let activeEffect
+        class Dep {
+
+            constructor(value) {
+                this.subscriber = new Set()
+                this._value = value
+            }
+
+            get value() {
+                console.log('in get value');
+                this.depend()
+                return this._value
+            }
+
+            set value(value) {
+                console.log('in set value');
+                this._value = value
+                this.notify()
+            }
+
+            depend() {
+                console.log('activateEffect: ', activeEffect);
+                if (activeEffect) {
+                    this.subscriber.add(activeEffect)
+                }
+            }
+
+            notify() {
+                console.log('subscriber: ', this.subscriber);
+                this.subscriber.forEach(effect => {
+                    effect()
+                })
+            }
+        }
+
+        function watchEffect(effect) {
+            activeEffect = effect
+            effect()
+            activeEffect = null
+        }
+
+        const dep = new Dep({aa: 1});
+        const ok = new Dep(false);
+        const msg = new Dep('hello');
+
+        console.log('ok', ok, 'msg', msg);
+        console.log('----------- 0 -----------');
+        watchEffect(() => {
+            // console.log(dep.value)
+
+            if (ok.value) {
+                console.log(ok.value, msg.value);
+            } else {
+                console.log('Error');
+            }
+        })
+        console.log('ok', ok, 'msg', msg);
+        console.log('----------- 1 -----------');
+        // dep不在watchffect中
+        console.log(dep.value)
+        dep.value = {aa: 2}
+        console.log(dep.value)
+        console.log('----------- 2 -----------');
+        // 这里虽然修改了msg的值，但是由于msg之前没有被get过，他的subscriber为空，notify不会激活watchEffect运行
+        console.log(msg.value);
+        msg.value = "Ss"
+        console.log('ok', ok, 'msg', msg);
+        console.log('----------- 3 -----------');
+        ok.value = true
+        console.log('----------- 4 -----------');
+        msg.value = "Ssr"
+        console.log('ok', ok, 'msg', msg);
+
+
+        </script>
+</body>
+</html>
